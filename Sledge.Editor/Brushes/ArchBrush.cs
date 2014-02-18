@@ -18,7 +18,7 @@ namespace Sledge.Editor.Brushes
         private readonly NumericControl _startAngle;
         private readonly NumericControl _archHeight;
         private readonly BooleanControl _curvedRamp;
-        private readonly NumericControl _tiltAngle;
+        private readonly NumericControl _tiltPct;
 
         public ArchBrush()
         {
@@ -28,9 +28,9 @@ namespace Sledge.Editor.Brushes
             _startAngle = new NumericControl(this) { LabelText = "Start angle", Minimum = 0, Maximum = 359, Value = 0 };
             _archHeight = new NumericControl(this) { LabelText = "Arch height", Minimum = -1024, Maximum = 1024, Value = 0 };
             _curvedRamp = new BooleanControl(this) { LabelText = "Curved ramp", Checked = false };
-            _tiltAngle = new NumericControl(this) { LabelText = "Tilt angle", Minimum = -90, Maximum = 90, Value = 0, Enabled = false };
+            _tiltPct = new NumericControl(this) { LabelText = "Tilt percentage", Minimum = -200, Maximum = 200, Value = 0, Enabled = false };
 
-            _curvedRamp.ValuesChanged += (s, b) => _tiltAngle.Enabled = _curvedRamp.GetValue();
+            _curvedRamp.ValuesChanged += (s, b) => _tiltPct.Enabled = _curvedRamp.GetValue();
         }
 
         public string Name
@@ -46,7 +46,7 @@ namespace Sledge.Editor.Brushes
             yield return _startAngle;
             yield return _archHeight;
             yield return _curvedRamp;
-            yield return _tiltAngle;
+            yield return _tiltPct;
         }
 
         private Solid MakeSolid(IDGenerator generator, IEnumerable<Coordinate[]> faces, ITexture texture, Color col)
@@ -76,14 +76,14 @@ namespace Sledge.Editor.Brushes
             if (numSides < 3) yield break;
             var wallWidth = _wallWidth.GetValue();
             if (wallWidth < 1) yield break;
-            var arc = (int)_arc.GetValue();
+            var arc = _arc.GetValue();
             if (arc < 1) yield break;
-            var startAngle = (int)_startAngle.GetValue();
+            var startAngle = _startAngle.GetValue();
             if (startAngle < 0 || startAngle > 359) yield break;
             var archHeight = _archHeight.GetValue();
             var curvedRamp = _curvedRamp.GetValue();
-            var tiltAngle = curvedRamp ? (int)_tiltAngle.GetValue() : 0;
-            if (tiltAngle < -90 || tiltAngle > 90) yield break;
+            var tiltPct = curvedRamp ? _tiltPct.GetValue() : 0;
+            if (tiltPct < -200 || tiltPct > 200) yield break;
             
             // Very similar to the pipe brush, except with options for start angle, tilt, arc, and height
             var width = box.Width;
@@ -96,7 +96,7 @@ namespace Sledge.Editor.Brushes
             var minorIn = minorOut - wallWidth;
 
             var start = DMath.DegreesToRadians(startAngle);
-            var tilt = DMath.DegreesToRadians(tiltAngle);
+            var tilt = DMath.Atan(tiltPct / 100);
             var angle = DMath.DegreesToRadians(arc) / numSides;
             var heightAdd = archHeight / numSides;
 
@@ -110,7 +110,7 @@ namespace Sledge.Editor.Brushes
             {
                 var a = start + i * angle;
                 var h = i * heightAdd;
-                var tiltHeight = wallWidth / 2 * DMath.Sin(tilt); // TODO: Interpolation
+                var tiltHeight = wallWidth / 2 * DMath.Tan(tilt); // TODO: Interpolation
                 
                 var xval = box.Center.X + majorOut * DMath.Cos(a);
                 var yval = box.Center.Y + minorOut * DMath.Sin(a);
